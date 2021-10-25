@@ -17,6 +17,7 @@
 package scale
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -564,6 +565,41 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 
 	glog.Infof("volume:[%v] -  spectrum scale volume create params : %v\n", scaleVol.VolName, scaleVol)
 
+	if scaleVol.IsFilesetBased && scaleVol.Compression != "" {
+		glog.Infof("createvolume: compression is enabled: changing volume name")
+		scaleVol.VolName = fmt.Sprintf("%s-COMPRESS%s", scaleVol.VolName, strings.ToUpper(scaleVol.Compression))
+	}
+
+	if scaleVol.IsFilesetBased && scaleVol.Tier != "" {
+		rule := "RULE 'T%sR%d' SET POOL '%s' REPLICATE(%d) WHERE FILESET_NAME LIKE 'pvc-%%-T%s-R%d%%'"
+		policy := connectors.Policy{}
+
+		if scaleVol.Replication != 0 {
+			if int(scaleVol.Replication) > volFsInfo.Replication.MaxDataReplicas {
+				glog.Errorf("replication value (%d) specified is higher than max data replicas allowed by fs (%d)",
+					scaleVol.Replication, volFsInfo.Replication.MaxDataReplicas)
+				return nil, fmt.Errorf("replication value (%d) specified is higher than max data replicas allowed by fs (%d)",
+					scaleVol.Replication, volFsInfo.Replication.MaxDataReplicas)
+			}
+
+			policy.Policy = fmt.Sprintf(rule, scaleVol.Tier, scaleVol.Replication,
+				scaleVol.Tier, scaleVol.Replication,
+				scaleVol.Tier, scaleVol.Replication)
+		} else {
+			policy.Policy = fmt.Sprintf(rule, scaleVol.Tier, volFsInfo.Replication.DefaultDataReplicas,
+				scaleVol.Tier, volFsInfo.Replication.DefaultDataReplicas,
+				scaleVol.Tier, volFsInfo.Replication.DefaultDataReplicas)
+		}
+		policy.Partition = "csi-" + volName
+
+		scaleVol.VolName = fmt.Sprintf("%s-T%s-R%d", scaleVol.VolName, scaleVol.Tier, scaleVol.Replication)
+		scaleVol.Connector.SetFilesystemPolicy(&policy, scaleVol.VolBackendFs)
+	} else if scaleVol.IsFilesetBased && scaleVol.Replication != 0 {
+		// Cannot have replication only. If tier is empty we exit out
+		glog.Errorf("tiering must be specified if replication is specified")
+		return nil, errors.New("tiering must be specified if replication is specified")
+	}
+
 	volReqInProcess, err := cs.IfSameVolReqInProcess(scaleVol)
 	if err != nil {
 		return nil, err
@@ -586,7 +622,7 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 			} else if jobStatus == VOLCOPY_JOB_FAILED {
 				glog.Errorf("volume:[%v] -  volume cloning job had failed", scaleVol.VolName)
 				return nil, status.Error(codes.Internal, fmt.Sprintf("volume cloning job had failed for volume:[%v]", scaleVol.VolName))
-                	} else if jobStatus == VOLCOPY_JOB_COMPLETED {
+			} else if jobStatus == VOLCOPY_JOB_COMPLETED {
 				glog.V(5).Infof("volume:[%v] -  volume cloning request has already completed successfully.", scaleVol.VolName)
 				return &csi.CreateVolumeResponse{
 					Volume: &csi.Volume{
@@ -860,16 +896,16 @@ func (cs *ScaleControllerServer) checkSnapshotSupport(conn connectors.SpectrumSc
 }
 
 func (cs *ScaleControllerServer) checkVolCloneSupport(conn connectors.SpectrumScaleConnector) error {
-        /* Verify Spectrum Scale Version is not below 5.1.2-1 */
-        versionCheck, err := cs.checkMinScaleVersion(conn, "5121")
-        if err != nil {
-                return err
-        }
+	/* Verify Spectrum Scale Version is not below 5.1.2-1 */
+	versionCheck, err := cs.checkMinScaleVersion(conn, "5121")
+	if err != nil {
+		return err
+	}
 
-        if !versionCheck {
-                return status.Error(codes.FailedPrecondition, "the minimum required Spectrum Scale version for volume cloning support with CSI is 5.1.2-1")
-        }
-        return nil
+	if !versionCheck {
+		return status.Error(codes.FailedPrecondition, "the minimum required Spectrum Scale version for volume cloning support with CSI is 5.1.2-1")
+	}
+	return nil
 }
 
 func (cs *ScaleControllerServer) validateSnapId(sId *scaleSnapId, scVol *scaleVolume, pCid string) error {
