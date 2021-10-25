@@ -594,6 +594,14 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, err
 	}
 
+	if scaleVol.Compression {
+		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
+	}
+
+	if scaleVol.Encryption {
+		glog.Infof("PLACEHOLDER: encryption is enabled: modify policy")
+	}
+
 	// Create symbolic link if not present
 	err = cs.createSoftlink(scaleVol, targetPath)
 	if err != nil {

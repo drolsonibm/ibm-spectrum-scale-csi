@@ -59,6 +59,8 @@ type scaleVolume struct {
 	FsetLinkPath       string                            `json:"fsetLinkPath"`
 	FsMountPoint       string                            `json:"fsMountPoint"`
 	NodeClass          string                            `json:"nodeClass"`
+	Compression        bool                              `json:"compression"`
+	Encryption         bool                              `json:"encryption"`
 }
 
 type scaleVolId struct {
@@ -119,6 +121,8 @@ func getScaleVolumeOptions(volOptions map[string]string) (*scaleVolume, error) {
 	parentFileset, isparentFilesetSpecified := volOptions[connectors.UserSpecifiedParentFset]
 	nodeClass, isNodeClassSpecified := volOptions[connectors.UserSpecifiedNodeClass]
 	permissions, isPermissionsSpecified := volOptions[connectors.UserSpecifiedPermissions]
+	compression, isCompressionSpecified := volOptions[connectors.UserSpecifiedCompression]
+	encryption, isEncryptionSpecified := volOptions[connectors.UserSpecifiedEncryption]
 
 	// Handling empty values
 	scaleVol.VolDirBasePath = ""
@@ -262,6 +266,16 @@ func getScaleVolumeOptions(volOptions map[string]string) (*scaleVolume, error) {
 
 	if isNodeClassSpecified {
 		scaleVol.NodeClass = nodeClass
+	}
+
+	if isCompressionSpecified && compression == "yes" {
+		scaleVol.Compression = true
+		glog.V(5).Infof("gpfs_util compression was set")
+	}
+
+	if isEncryptionSpecified && encryption == "yes" {
+		scaleVol.Encryption = true
+		glog.V(5).Infof("gpfs_util encryption was set")
 	}
 
 	return scaleVol, nil
