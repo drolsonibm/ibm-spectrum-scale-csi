@@ -490,6 +490,9 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, status.Error(codes.Internal, fmt.Sprintf("unable to get details for filesystem [%v] in Primary cluster. Error: %v", scaleVol.VolBackendFs, err))
 	}
 
+	policyRules, err := scaleVol.PrimaryConnector.GetFilesystemPolicy(scaleVol.VolBackendFs)
+	glog.V(1).Infof("Policy rule: %s", policyRules)
+
 	if volFsInfo.Mount.Status != filesystemMounted {
 		glog.Errorf("volume:[%v] - volume filesystem %s is not mounted on GUI node of Primary cluster", scaleVol.VolName, scaleVol.VolBackendFs)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("volume filesystem %s is not mounted on GUI node of Primary cluster", scaleVol.VolBackendFs))

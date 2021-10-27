@@ -659,6 +659,15 @@ type UnmountFilesystemRequest struct {
 	Force bool     `json:"force,omitempty"`
 }
 
+type GetPolicyResponse struct {
+	Policy []Policy `json:"policies,omitempty"`
+}
+
+type Policy struct {
+	FilesystemName string `json:"filesystemName,omitempty"`
+	PolicyRules    string `json:"policy,omitempty"`
+}
+
 const (
 	UserSpecifiedUID string = "uid"
 	UserSpecifiedGID string = "gid"

@@ -64,7 +64,7 @@ type SpectrumScaleConnector interface {
 	DeleteSymLnk(filesystemName string, LnkName string) error
 	GetFileSetResponseFromId(filesystemName string, Id string) (Fileset_v2, error)
 	GetFileSetResponseFromName(filesystemName string, filesetName string) (Fileset_v2, error)
-
+	GetFilesystemPolicy(filesystem string) (string, error)
 	IsValidNodeclass(nodeclass string) (bool, error)
 	IsSnapshotSupported() (bool, error)
 
