@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -385,4 +386,46 @@ func shortnameInSlice(shortname string, nodeNames []string) bool {
 		}
 	}
 	return false
+}
+
+const (
+	RULE_NAME                = "CSICOMPRESSION"
+	DEFAULT_COMPRESSION_ALGO = "z"
+	DEFAULT_CSI_RULE         = "\nRULE '%s' COMPRESS('%s') FOR FILESET('%s') WHERE NAME LIKE '%%'"
+	DEFAULT_CSI_REGEX        = "\nRULE '" + RULE_NAME + "' COMPRESS\\('" + DEFAULT_COMPRESSION_ALGO + "'\\) FOR FILESET\\((.+)\\) WHERE NAME LIKE '%'"
+)
+
+//RULE 'CSICOMPRESSION' COMPRESS('z') FOR FILESET('compressind') WHERE NAME LIKE '%'
+func modifyPolicyForCompression(policy *connectors.Policy, filesetName string) {
+	if !strings.Contains(policy.PolicyRules, RULE_NAME) {
+		// Create new policy RULE if non-existent
+		quoted_name := fmt.Sprintf("'%s'", filesetName)
+		policy.PolicyRules += fmt.Sprintf(DEFAULT_CSI_RULE, RULE_NAME, DEFAULT_COMPRESSION_ALGO, quoted_name)
+	} else {
+		// RULE exists
+		default_csi_regex := regexp.MustCompile(DEFAULT_CSI_REGEX)
+		filesets := default_csi_regex.FindStringSubmatch(policy.PolicyRules)
+		new_filesets := filesets[1] + fmt.Sprintf(", '%s'", filesetName)
+		rule := fmt.Sprintf(DEFAULT_CSI_RULE, RULE_NAME, DEFAULT_COMPRESSION_ALGO, new_filesets)
+		policy.PolicyRules = default_csi_regex.ReplaceAllString(policy.PolicyRules, rule)
+	}
+
+	glog.V(4).Infof("Modified policy rule: %s", policy.PolicyRules)
+}
+
+func modifyPolicyForEncryption(policy *connectors.Policy, filesetName string) {
+	if !strings.Contains(policy.PolicyRules, RULE_NAME) {
+		// Create new policy RULE if non-existent
+		quoted_name := fmt.Sprintf("'%s'", filesetName)
+		policy.PolicyRules += fmt.Sprintf(DEFAULT_CSI_RULE, RULE_NAME, DEFAULT_COMPRESSION_ALGO, quoted_name)
+	} else {
+		// RULE exists
+		default_csi_regex := regexp.MustCompile(DEFAULT_CSI_REGEX)
+		filesets := default_csi_regex.FindStringSubmatch(policy.PolicyRules)
+		new_filesets := filesets[1] + fmt.Sprintf(", '%s'", filesetName)
+		rule := fmt.Sprintf(DEFAULT_CSI_RULE, RULE_NAME, DEFAULT_COMPRESSION_ALGO, new_filesets)
+		policy.PolicyRules = default_csi_regex.ReplaceAllString(policy.PolicyRules, rule)
+	}
+
+	glog.V(4).Infof("Modified policy rule: %s", policy.PolicyRules)
 }

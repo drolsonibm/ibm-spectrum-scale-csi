@@ -490,9 +490,6 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, status.Error(codes.Internal, fmt.Sprintf("unable to get details for filesystem [%v] in Primary cluster. Error: %v", scaleVol.VolBackendFs, err))
 	}
 
-	policyRules, err := scaleVol.PrimaryConnector.GetFilesystemPolicy(scaleVol.VolBackendFs)
-	glog.V(1).Infof("Policy rule: %s", policyRules)
-
 	if volFsInfo.Mount.Status != filesystemMounted {
 		glog.Errorf("volume:[%v] - volume filesystem %s is not mounted on GUI node of Primary cluster", scaleVol.VolName, scaleVol.VolBackendFs)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("volume filesystem %s is not mounted on GUI node of Primary cluster", scaleVol.VolBackendFs))
@@ -597,12 +594,22 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, err
 	}
 
-	if scaleVol.Compression {
-		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
+	policy, err := scaleVol.PrimaryConnector.GetFilesystemPolicy(scaleVol.VolBackendFs)
+	glog.V(1).Infof("Policy rule: %s", policy.PolicyRules)
+
+	if err != nil {
+		return nil, err
 	}
 
-	if scaleVol.Encryption {
+	// Modify policy and append / merge new PV (fileset) into existing policy rule
+	if scaleVol.IsFilesetBased && scaleVol.Compression {
+		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
+		modifyPolicyForCompression(&policy, scaleVol.VolName)
+	}
+
+	if scaleVol.IsFilesetBased && scaleVol.Encryption {
 		glog.Infof("PLACEHOLDER: encryption is enabled: modify policy")
+		modifyPolicyForEncryption(&policy, scaleVol.VolName)
 	}
 
 	// Create symbolic link if not present

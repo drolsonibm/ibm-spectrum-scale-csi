@@ -1246,7 +1246,7 @@ func (s *spectrumRestV2) IsNodeComponentHealthy(nodeName string, component strin
 	return true, nil
 }
 
-func (s *spectrumRestV2) GetFilesystemPolicy(filesystemName string) (string, error) {
+func (s *spectrumRestV2) GetFilesystemPolicy(filesystemName string) (Policy, error) {
 	glog.V(4).Infof("rest_v2 getFilesystemPolicy for filesystem %s", filesystemName)
 
 	getPolicyURL := utils.FormatURL("http://10.11.112.118:8000/", fmt.Sprintf("scalemgmt/v2/filesystems/%s/policies", filesystemName))
@@ -1255,8 +1255,23 @@ func (s *spectrumRestV2) GetFilesystemPolicy(filesystemName string) (string, err
 	err := s.doHTTP(getPolicyURL, "GET", &getPolicyResponse, nil)
 	if err != nil {
 		glog.Errorf("Unable to get filesystem policy: %v", err)
-		return "", err
+		return Policy{}, err
 	}
-	policy_str := fmt.Sprintf("%s", getPolicyResponse.Policy[0].PolicyRules)
-	return policy_str, nil
+
+	return getPolicyResponse.Policy[0], nil
+}
+
+func (s *spectrumRestV2) SetFilesystemPolicy(policy *Policy) error {
+	glog.V(4).Infof("rest_v2 setFilesystemPolicy for filesystem %s", policy.FilesystemName)
+
+	setPolicyURL := utils.FormatURL("http://10.11.112.118:8000/", fmt.Sprintf("scalemgmt/v2/filesystems/%s/policies", policy.FilesystemName))
+	status := Status{}
+
+	err := s.doHTTP(setPolicyURL, "PUT", &status, nil)
+	if err != nil {
+		glog.Errorf("Unable to set filesystem policy: %v", err)
+		return err
+	}
+
+	return nil
 }
