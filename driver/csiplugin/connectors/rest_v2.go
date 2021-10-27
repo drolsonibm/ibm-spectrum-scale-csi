@@ -1267,7 +1267,7 @@ func (s *spectrumRestV2) SetFilesystemPolicy(policy *Policy) error {
 	setPolicyURL := utils.FormatURL("http://10.11.112.118:8000/", fmt.Sprintf("scalemgmt/v2/filesystems/%s/policies", policy.FilesystemName))
 	status := Status{}
 
-	err := s.doHTTP(setPolicyURL, "PUT", &status, nil)
+	err := s.doHTTP(setPolicyURL, "PUT", &status, policy)
 	if err != nil {
 		glog.Errorf("Unable to set filesystem policy: %v", err)
 		return err

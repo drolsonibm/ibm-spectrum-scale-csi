@@ -605,6 +605,7 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 	if scaleVol.IsFilesetBased && scaleVol.Compression {
 		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
 		modifyPolicyForCompression(&policy, scaleVol.VolName)
+		scaleVol.PrimaryConnector.SetFilesystemPolicy(&policy)
 	}
 
 	if scaleVol.IsFilesetBased && scaleVol.Encryption {

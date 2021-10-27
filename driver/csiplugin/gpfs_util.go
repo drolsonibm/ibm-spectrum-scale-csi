@@ -391,8 +391,8 @@ func shortnameInSlice(shortname string, nodeNames []string) bool {
 const (
 	RULE_NAME                = "CSICOMPRESSION"
 	DEFAULT_COMPRESSION_ALGO = "z"
-	DEFAULT_CSI_RULE         = "\nRULE '%s' COMPRESS('%s') FOR FILESET('%s') WHERE NAME LIKE '%%'"
-	DEFAULT_CSI_REGEX        = "\nRULE '" + RULE_NAME + "' COMPRESS\\('" + DEFAULT_COMPRESSION_ALGO + "'\\) FOR FILESET\\((.+)\\) WHERE NAME LIKE '%'"
+	DEFAULT_CSI_RULE         = "\nRULE '%s' MIGRATE COMPRESS('%s') FOR FILESET(%s) WHERE NAME LIKE '%%'"
+	DEFAULT_CSI_REGEX        = "\nRULE '" + RULE_NAME + "' MIGRATE COMPRESS\\('" + DEFAULT_COMPRESSION_ALGO + "'\\) FOR FILESET\\((.+)\\) WHERE NAME LIKE '%'"
 )
 
 //RULE 'CSICOMPRESSION' COMPRESS('z') FOR FILESET('compressind') WHERE NAME LIKE '%'
