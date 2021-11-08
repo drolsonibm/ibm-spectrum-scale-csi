@@ -62,6 +62,8 @@ type scaleVolume struct {
 	NodeClass          string                            `json:"nodeClass"`
 	Compression        bool                              `json:"compression"`
 	Encryption         bool                              `json:"encryption"`
+	Replication        string                            `json:"replication"`
+	Tier               string                            `json:"tier"`
 }
 
 type scaleVolId struct {
@@ -124,6 +126,8 @@ func getScaleVolumeOptions(volOptions map[string]string) (*scaleVolume, error) {
 	permissions, isPermissionsSpecified := volOptions[connectors.UserSpecifiedPermissions]
 	compression, isCompressionSpecified := volOptions[connectors.UserSpecifiedCompression]
 	encryption, isEncryptionSpecified := volOptions[connectors.UserSpecifiedEncryption]
+	replication, isReplicationSpecified := volOptions[connectors.UserSpecifiedReplication]
+	tier, isTierSpecified := volOptions[connectors.UserSpecifiedTier]
 
 	// Handling empty values
 	scaleVol.VolDirBasePath = ""
@@ -277,6 +281,21 @@ func getScaleVolumeOptions(volOptions map[string]string) (*scaleVolume, error) {
 	if isEncryptionSpecified && encryption == "yes" {
 		scaleVol.Encryption = true
 		glog.V(5).Infof("gpfs_util encryption was set")
+	}
+
+	if isReplicationSpecified && replication != "" {
+		val, err := strconv.ParseUint(replication, 10, 8)
+		if err != nil || val > 3 { // uint so cannot be less than 0; so 1, 2, 3
+			glog.V(5).Infof("gpfs_util replication value was not a uint value")
+			return &scaleVolume{}, status.Error(codes.InvalidArgument, "invalid value specified for replication")
+		}
+		scaleVol.Replication = replication
+		glog.V(5).Infof("gpfs_util replication was set")
+	}
+
+	if isTierSpecified && tier != "" {
+		scaleVol.Tier = strings.ToUpper(tier)
+		glog.V(5).Infof("gpfs_util tier was set")
 	}
 
 	return scaleVol, nil

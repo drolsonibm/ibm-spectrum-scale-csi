@@ -97,6 +97,8 @@ const (
 	UserSpecifiedPermissions    string = "permissions"
 	UserSpecifiedCompression    string = "compression"
 	UserSpecifiedEncryption     string = "encryption"
+	UserSpecifiedReplication    string = "replication"
+	UserSpecifiedTier           string = "tier"
 
 	FilesetComment string = "Fileset created by IBM Container Storage Interface driver"
 )

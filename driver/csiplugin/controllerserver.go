@@ -388,6 +388,13 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, status.Error(codes.InvalidArgument, "Volume Name is a required field")
 	}
 
+	secret, ok := req.Secrets["encryptionkey"]
+	if ok {
+		glog.V(3).Infof("We have a secret passed to us...print the key: %+v", secret)
+	} else {
+		glog.V(3).Infof("We did not get a csi_secret but... : %+v", req.Secrets)
+	}
+
 	/* Get volume size in bytes */
 	volSize := cs.getVolumeSizeInBytes(req)
 
@@ -538,6 +545,25 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 
 	glog.Infof("volume:[%v] -  spectrum scale volume create params : %v\n", scaleVol.VolName, scaleVol)
 
+	// Modify policy and append / merge new PV (fileset) into existing policy rule
+	if scaleVol.IsFilesetBased && scaleVol.Compression {
+		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
+		scaleVol.VolName = scaleVol.VolName + "-COMPRESSZ"
+		//modifyPolicyForCompression(&policy, scaleVol.VolName)
+		//scaleVol.PrimaryConnector.SetFilesystemPolicy(&policy)
+	}
+
+	if scaleVol.IsFilesetBased && scaleVol.Encryption {
+		glog.Infof("PLACEHOLDER: encryption is enabled: modify policy")
+		scaleVol.VolName = scaleVol.VolName + "-ENCRYPTION"
+		//modifyPolicyForEncryption(&policy, scaleVol.VolName)
+	}
+
+	if scaleVol.IsFilesetBased && (scaleVol.Tier != "" || scaleVol.Replication != "") {
+		glog.Infof("PLACEHOLDER: replication or tiering is enabled: modify policy")
+		scaleVol.VolName = scaleVol.VolName + "-T" + scaleVol.Tier + "-R" + scaleVol.Replication
+	}
+
 	volReqInProcess, err := cs.IfSameVolReqInProcess(scaleVol)
 	if err != nil {
 		return nil, err
@@ -594,24 +620,12 @@ func (cs *ScaleControllerServer) CreateVolume(ctx context.Context, req *csi.Crea
 		return nil, err
 	}
 
-	policy, err := scaleVol.PrimaryConnector.GetFilesystemPolicy(scaleVol.VolBackendFs)
-	glog.V(1).Infof("Policy rule: %s", policy.PolicyRules)
+	//policy, err := scaleVol.PrimaryConnector.GetFilesystemPolicy(scaleVol.VolBackendFs)
+	//glog.V(1).Infof("Policy rule: %s", policy.PolicyRules)
 
-	if err != nil {
-		return nil, err
-	}
-
-	// Modify policy and append / merge new PV (fileset) into existing policy rule
-	if scaleVol.IsFilesetBased && scaleVol.Compression {
-		glog.Infof("PLACEHOLDER: compression is enabled: modify policy")
-		modifyPolicyForCompression(&policy, scaleVol.VolName)
-		scaleVol.PrimaryConnector.SetFilesystemPolicy(&policy)
-	}
-
-	if scaleVol.IsFilesetBased && scaleVol.Encryption {
-		glog.Infof("PLACEHOLDER: encryption is enabled: modify policy")
-		modifyPolicyForEncryption(&policy, scaleVol.VolName)
-	}
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// Create symbolic link if not present
 	err = cs.createSoftlink(scaleVol, targetPath)
